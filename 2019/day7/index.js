@@ -6,7 +6,6 @@ function boot({ program, setting, output }) {
     result = n;
   };
   let inputIndex = 0;
-  let inputs = [setting, input];
   // these inputs are wrong, this needs to be stateful execution now...
   // I want an elixir flow pipeline!
   const inputQueue = {
