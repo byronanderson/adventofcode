@@ -1,5 +1,5 @@
 const { pipe, join, times } = require('ramda');
-const { fft } = require('./index');
+const { fft, fft2 } = require('./index');
 
 //const input = pipe(times(() => '03036732577212944063491565474664'), join(''))(10000);
 //time(() => {
@@ -26,6 +26,10 @@ test('works', () => {
   });
   time(() => {
     expect(fft('69317163492948606335995924319873', 100).slice(0, 8)).toEqual('52432133');
+  });
+
+  time(() => {
+    expect(fft2('03036732577212944063491565474664')).toEqual('84462026');
   });
 
   let input;

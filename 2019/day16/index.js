@@ -48,7 +48,7 @@ function time(fn) {
   const t1 = new Date().getTime();
   const retVal = fn();
   const t2 = new Date().getTime();
-  console.log("time:", t2 - t1);
+//  console.log("time:", t2 - t1);
   return retVal;
 }
 
@@ -82,7 +82,7 @@ function findDigit3(input, index, inputlength) {
 
 function transform(input) {
   const inputlength = input.length;
-  const output = [];
+  const output = new Array(input.length);
   const templatelength = template.length;
   let sum;
   let offset;
@@ -93,7 +93,7 @@ function transform(input) {
     sum = 0;
     for (let i = 0; i < inputlength; i++) {
       offset = i + 1;
-      templateIndex = Math.floor(offset / (index + 1)) % templatelength;
+      templateIndex = Math.floor(offset / (index + 1)) % 4;
       //const pattern = template[templateIndex];
       if (templateIndex === 1) {
         sum += input[i];
@@ -102,7 +102,7 @@ function transform(input) {
       }
     }
     });
-    output.push(Math.abs(sum) % 10);
+    output[index] = Math.abs(sum) % 10;
   }
   return output;
 }
@@ -111,10 +111,41 @@ function fft(input, phases, messageOffset = () => 0) {
   let value = input.trim().split("").map(x => parseInt(x));
   let i = 0;
   while (i++ < phases) {
-    console.log(i, value[0], new Date().getTime());
     value = transform(value);
   }
   const offset = messageOffset(value);
+  return value.slice(offset, offset + 8).join("");
+}
+
+function transform2(input) {
+  let output = [...input];
+  let partialSum = 0;
+  for (let i = input.length - 1; i >= Math.floor(input.length / 2); i--) {
+    partialSum = partialSum + input[i];
+    output[i] = Math.abs(partialSum) % 10;
+  }
+  return output;
+}
+
+function repeat(string, times) {
+  let output = "";
+  for (let i = 0; i < times; i++) {
+    output = output.concat(string);
+  }
+  return output;
+}
+
+function fft2(raw) {
+  const phases = 100;
+  const input = repeat(raw, 10000);
+  // 75177795 is too high
+  const offset = parseInt(input.slice(0, 7));
+  let value = input.trim().split("").map(x => parseInt(x));
+  let i = 0;
+  while (i++ < phases) {
+    value = transform2(value);
+    console.log("phase", i);
+  }
   return value.slice(offset, offset + 8).join("");
 }
 
@@ -125,4 +156,4 @@ function fft(input, phases, messageOffset = () => 0) {
 // I suppose I should be splitting at the input, stringifying at the output, and
     // mutating a bunch
 
-module.exports = { fft };
+module.exports = { fft, fft2 };
