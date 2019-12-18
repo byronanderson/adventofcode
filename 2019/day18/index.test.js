@@ -1,0 +1,39 @@
+const { shortestPath, parseMap } = require("./index");
+test("works", () => {
+  expect(
+    shortestPath(
+      parseMap(`
+    #########
+    #b.A.@.a#
+    #########
+  `)
+    )
+  ).toEqual(8);
+  expect(
+    shortestPath(
+      parseMap(`
+        ########################
+        #...............b.C.D.f#
+        #.######################
+        #.....@.a.B.c.d.A.e.F.g#
+        ########################
+     `)
+    )
+  ).toEqual(132);
+
+  expect(
+    shortestPath(
+      parseMap(`
+#################
+#i.G..c...e..H.p#
+########.########
+#j.A..b...f..D.o#
+########@########
+#k.E..a...g..B.n#
+########.########
+#l.F..d...h..C.m#
+#################
+     `)
+    )
+  ).toEqual(136);
+});
