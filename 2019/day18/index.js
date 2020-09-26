@@ -1,3 +1,4 @@
+const { uniq } = require('ramda');
 function shortestPath(map) {
   // if there are no keys on the map, you are done
   // make a pathing tree to help answer this question:
@@ -6,6 +7,7 @@ function shortestPath(map) {
   //
   // for each unblocked key, collect the key (unlocking the door)
   // and recurse with a new map, unlocked door removed, entrance marked at your current location
+  return null;
   if (keys(map).length === 0) return 0;
   return Math.min(
     ...unblockedKeys(map).map(
@@ -14,56 +16,136 @@ function shortestPath(map) {
   );
 }
 
+function relax(gate, map) {
+  const newMap = { ...map };
+  const loc = location(gate, map);
+  newMap[`${loc.x},${loc.y}`] = ".";
+  return newMap;
+}
+
 function collect(key, map) {
   const newMap = { ...map };
   const startingLocation = location("@", map);
-  newMap[`${startingLocation[0]},${startingLocation[1]}`] = ".";
-  newMap[`${key.x},${key.y}`] = "@";
+  newMap[`${startingLocation.x},${startingLocation.y}`] = ".";
   Object.entries(map)
     .filter(([loc, el]) => el === key.el.toUpperCase())
     .forEach(([loc]) => {
       newMap[loc] = ".";
     });
+  newMap[`${key.x},${key.y}`] = "@";
   return newMap;
 }
 
 function location(element, map) {
   const el = Object.entries(map).find(([loc, char]) => char === element);
-  return el[0].split(",").map(x => parseInt(x));
+  const [x, y] =  el[0].split(",").map(x => parseInt(x));
+  return { x, y, el: element };
 }
 
-function parseMap(map) {
-  const output = {};
-  const lines = map.trim().split("\n");
+function parseMap(string) {
+  const map = {};
+  const lines = string.trim().split("\n");
   for (let y = 0; y < lines.length; y++) {
     const line = lines[y];
     const chars = line.trim().split("");
     for (let x = 0; x < chars.length; x++) {
-      output[`${x},${y}`] = chars[x];
+      map[`${x},${y}`] = chars[x];
     }
   }
-  return output;
+
+  // for each key on the map
+  // imagining that we were at location represented by that key
+  // find the distance to every other key and put it into a lookup table
+  // data structure: { keys: List<Key>, distances: List<[Location, Location,
+  // distance, blockages]> }
+  const mykeys = keys(map);
+  let distances = mykeys.reduce((distances, key) => distances.concat(findDistances(key, map)), []);
+  distances = distances.concat(findDistances(location("@", map), map, distances));
+  console.log(distances);
+  throw new Error('this is the last part that currently makes sense');
+  return { map, keys: mykeys, distances };
+}
+
+// unblockedKeys = keys.filter(destination => tryToGetTo(source, destination,
+// map))
+// distances for this source
+function findDistances(source, map) {
+  console.log("from", source);
+  let effectiveMap = collect(source, map);
+  let done = false;
+  let i = 0;
+  let filledLocations;
+  let distances = [];
+  let numFilled;
+  const locations = [];
+  while (!done) {
+    let filling = true;
+    let blockages = [];
+    while (filling) {
+      i++;
+      [effectiveMap, numFilled, blockers] = fill(effectiveMap);
+      blockages = uniq(blockages.concat(blockers));
+      // filledLocations.forEach(({distance, ...destination}) => {
+        // if (destination.el.match(/[a-z]/)) {
+          // distances.push({ source, destination, distance });
+        // }
+      // });
+      filling = numFilled > 0;
+    }
+    done = blockages.length === 0;
+    console.log(blockages);
+    if (!done) effectiveMap = relax(blockages[0], effectiveMap);
+    // maybe let the filling get blocked, but then add a blockage as a thing, and unblock to get further?  but then distance is sorta unknown.  need to add as an extra bit of information on the filling-map?  like a value would be '@10', which means it is reachable, but reachable at a distance of 10 movements
+  }
+
+  console.log(effectiveMap);
+
+  return distances; // each source/destination should only have one distance
 }
 
 //function filled(map) {
 //return Object.values(map).filter(x => x === 'empty').length === 0;
 //}
 
+function parseDistance(stat) {
+  const matchdata = stat.match(/\d+/);
+  if (matchdata) {
+    return parseInt(matchdata[0]);
+  } else {
+    return 0;
+  }
+}
+
+// but what about when there is a cycle
+// but what about when there is two paths from one spot to another?  and one is
+//   a shortcut that is blocked?
+
 function fill(map) {
   const newMap = { ...map };
   let numFilled = 0;
+  let blockages = [];
   Object.entries(map)
-    .filter(([loc, stat]) => stat === "@")
-    .forEach(([loc]) => {
+    .filter(([loc, stat]) => stat.match(/@/))
+    .forEach(([loc, stat]) => {
+      const distance = parseDistance(stat) + 1;
       const [x, y] = loc.split(",").map(x => parseInt(x));
       function fill(x, y) {
         const val = newMap[`${x},${y}`];
-        //console.log("checking", val);
         if (val && val.match(/[.a-z]/)) {
-          //console.log("filling", x, y);
           // not blocked and not a wall
-          newMap[`${x},${y}`] = "@";
-          numFilled++;
+          newMap[`${x},${y}`] = `@${distance}`;
+          // filledLocations.push({ x, y, el: val, distance });
+          numFilled++
+        //} else if (val && val.match(/@/)) {  // assuming this case doesn't
+          //actually exist for now
+          //const [item, otherdistance] = parseDistance(val);
+          //if (distance < otherdistance) {
+            //newMap[`${x},${y}`] = `${item}@${distance}`;
+            // filledLocations.push({ x, y, el: val, distance });
+            //numFilled++;
+          //}
+        } else if (val && val.match(/^[A-Z]$/)) {
+          blockages.push(val);
         }
       }
       fill(x + 1, y);
@@ -71,7 +153,7 @@ function fill(map) {
       fill(x, y + 1);
       fill(x, y - 1);
     });
-  return [newMap, numFilled];
+  return [newMap, numFilled, blockages];
 }
 
 const filledCount = map => Object.values(map).filter(x => x === "@").length;
@@ -92,7 +174,7 @@ function keyFromEntry([loc, el]) {
 // between things
 
 function unblockedKeys(map) {
-  const [startX, startY] = location("@", map);
+  const { x: startX, y: startY } = location("@", map);
   let filledMap = map;
   let done = false;
   let uncollectedKeys = keys(map);
